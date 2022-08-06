@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MinimalCleanApi</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" Version="4.4.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.7" />
+    <PackageReference Include="MongoDB.Entities" Version="20.26.5" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    <PackageReference Include="ValueOf" Version="2.0.31" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Contracts\Webservice\Requests" />
+    <Folder Include="Contracts\Webservice\Responses" />
+    <Folder Include="Endpoints" />
+    <Folder Include="Services" />
+  </ItemGroup>
+
+</Project>
