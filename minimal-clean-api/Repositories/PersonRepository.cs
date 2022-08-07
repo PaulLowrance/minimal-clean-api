@@ -1,4 +1,5 @@
 ﻿using MinimalCleanApi.Contracts.DTO.Members;
+using MinimalCleanApi.Domain.Membership;
 using MongoDB.Entities;
 
 namespace MinimalCleanApi.Repositories;
@@ -11,9 +12,15 @@ public class PersonRepository : IPersonRepository
         await DB.SaveAsync(personToSave, cancellation: cancellationToken);
     }
     //get all persons
-    public async Task<IEnumerable<PersonDto>> GetAllPersons(CancellationToken cancellationToken)
+    public async Task<IEnumerable<PersonDto>> GetAllPersons(bool includeArchived = false,
+        CancellationToken cancellationToken = default)
     {
-        return await DB.Find<PersonDto>().ExecuteAsync(cancellationToken);
+        if(includeArchived)
+            return await DB.Find<PersonDto>().ExecuteAsync(cancellationToken);
+
+        return await DB.Find<PersonDto>()
+            .Match(p => p.MembershipInformation.IsActive)
+            .ExecuteAsync(cancellationToken);
     }
     //delete person
     public async Task<(bool isAcknowledged, long deletedCount)> DeletePerson(PersonDto personToDelete,
@@ -28,6 +35,37 @@ public class PersonRepository : IPersonRepository
         return await DB.Find<PersonDto>()
             .Match(p => p.ID.Equals(personId, StringComparison.InvariantCultureIgnoreCase))
             .ExecuteFirstAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<PersonDto>> GetAllPersonsByMembershipTypes(IList<int> membershipTypes, bool includeArchived, CancellationToken cancellationToken = default)
+    {
+        if(includeArchived)
+        {
+            return await DB.Find<PersonDto>()
+                .Match(p => membershipTypes.Contains(p.MembershipInformation.MembershipType))
+                .ExecuteAsync(cancellationToken);
+        }
+        return await DB.Find<PersonDto>()
+            .Match(p => membershipTypes.Contains(p.MembershipInformation.MembershipType) && p.MembershipInformation.IsActive)
+            .ExecuteAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<PersonDto>> GetPersonByName(string name, bool includeArchive = default,
+        CancellationToken cancellationToken = default)
+    {
+        if (includeArchive)
+        {
+            return await DB.Find<PersonDto>()
+                .Match(p => p.FirstName.Contains(name, StringComparison.InvariantCultureIgnoreCase) ||
+                            p.LastName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
+                .ExecuteAsync(cancellationToken);
+        }
+        
+        return await DB.Find<PersonDto>()
+            .Match(p => (p.FirstName.Contains(name, StringComparison.InvariantCultureIgnoreCase) ||
+                         p.LastName.Contains(name, StringComparison.InvariantCultureIgnoreCase)) &&
+                        p.MembershipInformation.IsActive)
+            .ExecuteAsync(cancellationToken);
     }
 
     public async Task<IEnumerable<PersonDto>> GetPersonsByIds(IEnumerable<string> personIds,
@@ -50,9 +88,10 @@ public interface IPersonRepository
     /// <summary>
     /// Gets all persons in the DB
     /// </summary>
-    /// <param name="cancellationToken"></param>
+    /// <param name="includeArchived"><see cref="bool"/> when true the result set will include inactive memberships</param>
+    /// <param name="cancellationToken">the <see cref="CancellationToken"/></param>
     /// <returns>Returns <see cref="IEnumerable{T}"/> of <see cref="PersonDto"/></returns>
-    Task<IEnumerable<PersonDto>> GetAllPersons(CancellationToken cancellationToken = default);
+    Task<IEnumerable<PersonDto>> GetAllPersons(bool includeArchived = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes person from database
@@ -77,4 +116,24 @@ public interface IPersonRepository
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     Task<PersonDto> GetPersonById(string personId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all people by the membership type
+    /// </summary>
+    /// <param name="membershipTypes"><see cref="IList{T}"/> of <see cref="MembershipType"/> as <see cref="int"/></param>
+    /// <param name="includeArchived"><see cref="bool"/> when true the result set will include inactive memberships</param>
+    /// <param name="cancellationToken">the <see cref="CancellationToken"/></param>
+    /// <returns><see cref="IEnumerable{T}"/></returns>
+    Task<IEnumerable<PersonDto>> GetAllPersonsByMembershipTypes(IList<int> membershipTypes, bool includeArchived = default,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Searches for person by name. includes all name fields.
+    /// </summary>
+    /// <param name="name"><see cref="string"/> of part of the name</param>
+    /// <param name="includeArchive">when true, inactive memberships will be returned</param>
+    /// <param name="cancellationToken">the <see cref="CancellationToken"/></param>
+    /// <returns><see cref="IEnumerable{T}"/> of all entries that contain some part of given string</returns>
+    Task<IEnumerable<PersonDto>> GetPersonByName(string name, bool includeArchive = default,
+        CancellationToken cancellationToken = default);
 }
