@@ -48,6 +48,15 @@ public interface IRelationshipRepository
     /// <param name="cancellationToken">the <see cref="CancellationToken"/></param>
     /// <returns><see cref="IEnumerable{T}"/> of <see cref="RelationshipDto"/></returns>
     Task<IEnumerable<RelationshipDto>> GetRelationshipsForPerson(string personId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Delete a collection for relationships. Used to delete all relationships for a person
+    /// </summary>
+    /// <param name="relationshipsToDelete"></param>
+    /// <param name="cancellationToken">the <see cref="CancellationToken"/></param>
+    /// <returns><see cref="Tuple{T1, T2}"/> indicating the request was acknowledged and number of records affected</returns>
+    Task<(bool isAcknowledged, long deleteCount)> DeleteRelationships(IEnumerable<string> relationshipsToDelete,
+        CancellationToken cancellationToken = default);
 }
 
 public class RelationshipRepository : IRelationshipRepository
@@ -87,5 +96,9 @@ public class RelationshipRepository : IRelationshipRepository
             .ExecuteAsync(cancellationToken);
     }
 
-
+    public async Task<(bool isAcknowledged, long deleteCount)> DeleteRelationships(IEnumerable<string> relationshipsToDelete, CancellationToken cancellationToken = default)
+    {
+        var result = await DB.DeleteAsync<RelationshipDto>(relationshipsToDelete, cancellation: cancellationToken);
+        return (result.IsAcknowledged, result.DeletedCount);
+    }
 }

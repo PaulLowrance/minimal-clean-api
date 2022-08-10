@@ -11,4 +11,5 @@ public class MembershipInformation
     public DateOfMembership DateOfMembership { get; set; } = default!;
     public string MembershipStory { get; set; } = default!;
     public bool IsActive { get; set; }
+    public string ID { get; set; }
 }
