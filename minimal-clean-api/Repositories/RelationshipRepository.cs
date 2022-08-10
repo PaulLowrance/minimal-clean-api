@@ -57,16 +57,31 @@ public interface IRelationshipRepository
     /// <returns><see cref="Tuple{T1, T2}"/> indicating the request was acknowledged and number of records affected</returns>
     Task<(bool isAcknowledged, long deleteCount)> DeleteRelationships(IEnumerable<string> relationshipsToDelete,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the relationships for a list of persons (useful for results of search)
+    /// </summary>
+    /// <param name="personIds"><see cref="IEnumerable{T}"/>of string Person ID</param>
+    /// <param name="cancellationToken">the <see cref="CancellationToken"/></param>
+    /// <returns><see cref="IEnumerable{T}"/> of <see cref="RelationshipDto" /></returns>
+    Task<IEnumerable<RelationshipDto>> GetRelationshipsForPersonIds(IEnumerable<string> personIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves collection of relationships
+    /// </summary>
+    /// <param name="relationshipDtos"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task CreateOrUpdateRelationships(IEnumerable<RelationshipDto> relationshipDtos, CancellationToken cancellationToken = default);
 }
 
 public class RelationshipRepository : IRelationshipRepository
 {
-    public async Task CreateOrUpdateRelationship(RelationshipDto relationshipDto, CancellationToken cancellationToken)
-    {
-        await DB.SaveAsync(relationshipDto, cancellation: cancellationToken);
-    }
+    public async Task CreateOrUpdateRelationship(RelationshipDto relationshipDto, CancellationToken cancellationToken = default) => await DB.SaveAsync(relationshipDto, cancellation: cancellationToken);
 
-    public async Task<RelationshipDto> GetRelationshipById(string id, CancellationToken cancellationToken)
+    public async Task CreateOrUpdateRelationships(IEnumerable<RelationshipDto> relationshipDtos, CancellationToken cancellationToken = default) => await DB.SaveAsync(relationshipDtos, cancellation: cancellationToken);
+
+    public async Task<RelationshipDto> GetRelationshipById(string id, CancellationToken cancellationToken = default)
     {
         return await DB.Find<RelationshipDto>()
             .Match(r => r.ID.Equals(id, StringComparison.InvariantCultureIgnoreCase))
@@ -74,7 +89,7 @@ public class RelationshipRepository : IRelationshipRepository
     }
 
     public async Task<IEnumerable<RelationshipDto>> GetRelationshipsByPersonAndType(string personId,
-        int relationshipType, CancellationToken cancellationToken)
+        int relationshipType, CancellationToken cancellationToken = default)
     {
         return await DB.Find<RelationshipDto>()
             .Match(r => r.From.Equals(personId, StringComparison.InvariantCultureIgnoreCase) &&
@@ -82,14 +97,19 @@ public class RelationshipRepository : IRelationshipRepository
             .ExecuteAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<RelationshipDto>> GetRelationshipsForPersonIds(IEnumerable<string> personIds, CancellationToken cancellationToken = default)
+    {
+        return await DB.Find<RelationshipDto>().Match(r => personIds.Contains(r.ID)).ExecuteAsync(cancellationToken);
+    }
+
     public async Task<(bool isAcknowledged, long deleteCount)> DeleteRelationship(RelationshipDto relationshipDto,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         var result = await DB.DeleteAsync<RelationshipDto>(relationshipDto.ID, cancellation: cancellationToken);
         return (result.IsAcknowledged, result.DeletedCount);
     }
 
-    public async Task<IEnumerable<RelationshipDto>> GetRelationshipsForPerson(string personId, CancellationToken cancellationToken)
+    public async Task<IEnumerable<RelationshipDto>> GetRelationshipsForPerson(string personId, CancellationToken cancellationToken = default)
     {
         return await DB.Find<RelationshipDto>()
             .Match(r => r.From.Equals(personId))
